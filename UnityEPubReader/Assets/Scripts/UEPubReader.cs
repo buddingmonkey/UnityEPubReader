@@ -10,11 +10,15 @@ namespace UEPub{
 
 		public string epubFolderLocation { get; private set; }
 
-		public Dictionary<string, string> chapters;
+		private Dictionary<string, string> bookItems;
+		private List<string> spine;
 
 		private string opfFileString;
 
 		public UEPubReader(string file){
+			bookItems = new Dictionary<string, string> ();
+			spine = new List<string> ();
+
 			var fileArray = file.Split('.');
 
 			if (fileArray [fileArray.Length - 1].ToLower() != "epub") {
@@ -39,6 +43,25 @@ namespace UEPub{
 			XmlNode rootFile =
 				doc.SelectSingleNode("/container/rootfiles/rootfile");
 			opfFileString = rootFile.Attributes ["full-path"].InnerText;
+		}
+
+		private void ParseOPF(){
+			var opfFile = epubFolderLocation + "/" + opfFileString;
+			
+			XmlDocument doc = new XmlDocument ();
+			doc.Load (opfFile);
+
+			var nodes = doc.SelectNodes ("/package/manifest");
+
+			foreach (XmlNode node in nodes) {
+				bookItems[node.Attributes["id"].InnerText] = node.Attributes["href"].InnerText;
+			}
+
+			nodes = doc.SelectNodes("/package/spine");
+
+			foreach (XmlNode node in nodes){
+				spine.Add(node.Attributes["idref"].InnerText);
+			}
 		}
 	}
 }

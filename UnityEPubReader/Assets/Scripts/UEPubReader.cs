@@ -4,11 +4,14 @@ using System.Collections.Generic;
 using System.Xml;
 using System.IO;
 using System.Text;
+using System.Linq;
 
 namespace UEPub{
 	public class UEPubReader {
 
 		public string epubFolderLocation { get; private set; }
+
+		public List<string> chapters;
 
 		private Dictionary<string, string> bookItems;
 		private List<string> spine;
@@ -32,6 +35,9 @@ namespace UEPub{
 			epubFolderLocation = Application.temporaryCachePath + "/" + folderName;
 
 			ZipUtil.Unzip ( file, epubFolderLocation);
+
+			ParseContainer ();
+			ParseOPF ();
 		}
 
 		private void ParseContainer(){
@@ -40,9 +46,11 @@ namespace UEPub{
 			XmlDocument doc = new XmlDocument ();
 			doc.Load (containerFile);
 
-			XmlNode rootFile =
-				doc.SelectSingleNode("/container/rootfiles/rootfile");
-			opfFileString = rootFile.Attributes ["full-path"].InnerText;
+			var xmlnsManager = new System.Xml.XmlNamespaceManager(doc.NameTable);
+			xmlnsManager.AddNamespace("ns", "urn:oasis:names:tc:opendocument:xmlns:container");
+
+			XmlNodeList rootFiles = doc.SelectNodes("/ns:container/ns:rootfiles/ns:rootfile", xmlnsManager);
+			opfFileString = rootFiles[0].Attributes ["full-path"].InnerText;
 		}
 
 		private void ParseOPF(){
@@ -51,16 +59,32 @@ namespace UEPub{
 			XmlDocument doc = new XmlDocument ();
 			doc.Load (opfFile);
 
-			var nodes = doc.SelectNodes ("/package/manifest");
+			var xmlnsManager = new System.Xml.XmlNamespaceManager(doc.NameTable);
+			xmlnsManager.AddNamespace("ns", "http://www.idpf.org/2007/opf");
+			xmlnsManager.AddNamespace("dc", "http://purl.org/dc/elements/1.1/");
+			xmlnsManager.AddNamespace("dcterms", "http://purl.org/dc/terms/");
+
+			var nodes = doc.SelectNodes ("/ns:package/ns:manifest/ns:item", xmlnsManager);
 
 			foreach (XmlNode node in nodes) {
 				bookItems[node.Attributes["id"].InnerText] = node.Attributes["href"].InnerText;
 			}
 
-			nodes = doc.SelectNodes("/package/spine");
+			nodes = doc.SelectNodes("/ns:package/ns:spine/ns:itemref", xmlnsManager);
 
 			foreach (XmlNode node in nodes){
 				spine.Add(node.Attributes["idref"].InnerText);
+			}
+
+			var toc = spine.Select (x => bookItems [x])
+					.ToList ();
+
+			chapters = new List<string> ();
+
+			foreach (string s in toc) {
+				StreamReader sr = new StreamReader(Path.GetDirectoryName(opfFile) + "/" + s);
+				chapters.Add(sr.ReadToEnd());
+				sr.Close();
 			}
 		}
 	}

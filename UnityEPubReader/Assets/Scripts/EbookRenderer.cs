@@ -21,5 +21,7 @@ public class EbookRenderer : MonoBehaviour {
 		//displayText.text = chapter.HtmlContent;
 		var epub = new UEPubReader ("Assets/Books/austen-pride-and-prejudice-illustrations.epub");
 		Debug.Log (epub.epubFolderLocation);
+
+		displayText.text = epub.chapters[10];
 	}
 }

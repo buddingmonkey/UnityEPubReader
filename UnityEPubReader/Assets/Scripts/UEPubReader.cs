@@ -11,6 +11,7 @@ namespace UEPub{
 	public class UEPubReader {
 
 		public string epubFolderLocation { get; private set; }
+		public string htmlRoot { get; private set; }
 		public UEPubMetadata metadata { get; private set; }
 
 		public List<string> chapters;
@@ -86,8 +87,10 @@ namespace UEPub{
 			var toc = spine.Select (x => bookItems [x]).ToList ();
 			chapters = new List<string> ();
 
+			htmlRoot = Path.GetDirectoryName (opfFile) + "/";
+
 			foreach (string s in toc) {
-				StreamReader sr = new StreamReader (Path.GetDirectoryName (opfFile) + "/" + s);
+				StreamReader sr = new StreamReader(htmlRoot + s);
 				chapters.Add (sr.ReadToEnd ());
 				sr.Close ();
 			}
